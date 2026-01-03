@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Trend Factory (Safe Mode)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #0F172A; color: #E2E8F0; }
+        .prose h1, .prose h2, .prose h3 { color: #E2E8F0; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: bold; }
+        .prose h1 { font-size: 1.8em; border-bottom: 2px solid #334155; }
+        .prose h2 { font-size: 1.5em; border-left: 5px solid #3B82F6; padding-left: 0.5em; }
+        .prose p, .prose ul, .prose ol { color: #CBD5E1; margin-bottom: 1em; line-height: 1.8; }
+        .prose strong { color: #38BDF8; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .topic-card:hover { transform: translateY(-2px); border-color: #3B82F6; background: rgba(59, 130, 246, 0.1); cursor: pointer; }
+        .loader { border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #3B82F6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-gray-700 sticky top-0 z-50 bg-[#0F172A]/90 backdrop-blur">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span class="text-2xl">🏭</span> Gemini Trend Factory
+            </h1>
+            <div class="flex items-center gap-4">
+                <button onclick="clearApiKey()" class="text-xs text-gray-400 hover:text-red-400 underline">APIキーを削除</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+
+        <!-- API Key Modal (Shown if key is missing) -->
+        <div id="apiKeyModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-600 shadow-2xl">
+                <h2 class="text-xl font-bold text-white mb-4">初期設定</h2>
+                <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。<br>キーはあなたのブラウザにのみ保存され、外部には送信されません。</p>
+                <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:border-blue-500 outline-none">
+                <button onclick="saveApiKey()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition">保存して開始</button>
+                <p class="text-xs text-gray-500 mt-4 text-center">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-400">APIキーを取得する (Google AI Studio)</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Step 1: Input -->
+        <section id="inputSection" class="glass-panel p-8 rounded-xl shadow-lg text-center max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-white mb-2">トレンド分析 & ネタ出し</h2>
+            <p class="text-gray-400 mb-6 text-sm">キーワードを入力してください。AIがトレンドを分析し、記事案を20個提案します。</p>
+            
+            <div class="relative max-w-lg mx-auto">
+                <input type="text" id="keyword" placeholder="例：AI副業、ミニマリスト、推し活..." 
+                    class="w-full bg-gray-800 border border-gray-600 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-lg shadow-inner"
+                    onkeydown="if(event.key === 'Enter') analyzeTrends()">
+                <button onclick="analyzeTrends()" id="analyzeBtn" class="absolute right-2 top-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 rounded-full transition-all shadow-md flex items-center gap-2">
+                    <span id="analyzeIcon">🔍</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Status Bar -->
+        <div id="statusSection" class="hidden max-w-3xl mx-auto">
+            <div class="bg-gray-800 rounded-lg p-4 flex items-center gap-4 border border-gray-700 shadow-lg">
+                <div class="loader"></div>
+                <div class="flex-grow">
+                    <p id="statusText" class="text-sm font-bold text-blue-400 typing">AI AGENT IS WORKING...</p>
+                    <p id="statusSub" class="text-xs text-gray-500">Geminiが市場トレンドを分析中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Topic Selection -->
+        <section id="topicsSection" class="hidden fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded">STEP 1</span>
+                    記事テーマ案 (20選)
+                </h3>
+                <button onclick="resetAll()" class="text-sm text-gray-400 hover:text-white">やり直す</button>
+            </div>
+            
+            <div id="topicsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Topics will be injected here -->
+            </div>
+        </section>
+
+        <!-- Step 3 & 4: Article Generation -->
+        <section id="articleSection" class="hidden fade-in grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Outline -->
+            <div class="space-y-4">
+                <div class="bg-gray-800 px-4 py-2 rounded-t-lg border-b border-gray-700 flex justify-between items-center">
+                    <span class="text-sm font-bold text-gray-300">📊 構成案 (Outline)</span>
+                    <span class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">SEO Optimized</span>
+                </div>
+                <div class="glass-panel p-6 rounded-b-lg min-h-[500px] max-h-[800px] overflow-y-auto custom-scrollbar">
+                    <div id="outlineContent" class="prose prose-invert max-w-none text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Full Body -->
+            <div class="space-y-4">
+                <div class="bg-blue-900/30 px-4 py-2 rounded-t-lg border-b border-blue-800/50 flex justify-between items-center">
+                    <span class="text-sm font-bold text-blue-300">📝 記事本文 (Draft)</span>
+                    <button onclick="copyArticle()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition">コピー</button>
+                </div>
+                <div class="glass-panel p-6 rounded-b-lg min-h-[500px] max-h-[800px] overflow-y-auto custom-scrollbar">
+                    <div id="articleContent" class="prose prose-invert max-w-none"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        // --- API Key Management ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const storedKey = localStorage.getItem('gemini_api_key');
+            if (!storedKey) {
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+            }
+        });
+
+        function saveApiKey() {
+            const key = document.getElementById('inputApiKey').value.trim();
+            if (!key) return alert('APIキーを入力してください');
+            localStorage.setItem('gemini_api_key', key);
+            document.getElementById('apiKeyModal').classList.add('hidden');
+        }
+
+        function getApiKey() {
+            return localStorage.getItem('gemini_api_key');
+        }
+
+        function clearApiKey() {
+            if(confirm('APIキーを削除しますか？')) {
+                localStorage.removeItem('gemini_api_key');
+                location.reload();
+            }
+        }
+
+        // --- Core Functions ---
+
+        async function callGemini(prompt) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                document.getElementById('apiKeyModal').classList.remove('hidden');
+                throw new Error("API Key missing");
+            }
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || "API Error");
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        function setStatus(loading, mainText, subText) {
+            const section = document.getElementById('statusSection');
+            if (loading) {
+                section.classList.remove('hidden');
+                document.getElementById('statusText').innerText = mainText;
+                document.getElementById('statusSub').innerText = subText || "";
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+
+        function resetAll() {
+            document.getElementById('inputSection').classList.remove('hidden');
+            document.getElementById('topicsSection').classList.add('hidden');
+            document.getElementById('articleSection').classList.add('hidden');
+            document.getElementById('keyword').value = '';
+        }
+
+        // --- Step 1: Trend Analysis & Topics ---
+
+        async function analyzeTrends() {
+            const keyword = document.getElementById('keyword').value;
+            if (!keyword) return alert("キーワードを入力してください");
+
+            document.getElementById('inputSection').classList.add('hidden');
+            setStatus(true, "トレンド分析中...", `「${keyword}」周辺の市場ニーズをリサーチしています`);
+
+            const prompt = `
+            あなたはプロのWebマーケター兼編集長です。
+            キーワード「${keyword}」について、現在のトレンドや読者の関心事（インサイト）を分析してください。
+            その上で、Noteで多くのスキを集めそうな「記事タイトルの案」を20個リストアップしてください。
+
+            【条件】
+            - ターゲット: 初心者〜中級者
+            - バリエーション: 「ハウツー」「マインドセット」「ツール紹介」「体験談」「逆張り」など網羅的に
+            - 出力形式: JSON配列のみ（例: ["タイトル1", "タイトル2", ...]）
+            - 余計な説明は一切不要
+            `;
+
+            try {
+                let text = await callGemini(prompt);
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const topics = JSON.parse(text);
+
+                renderTopics(topics);
+                setStatus(false);
+                document.getElementById('topicsSection').classList.remove('hidden');
+
+            } catch (e) {
+                alert("エラーが発生しました: " + e.message);
+                resetAll();
+            }
+        }
+
+        function renderTopics(topics) {
+            const grid = document.getElementById('topicsGrid');
+            grid.innerHTML = "";
+            
+            topics.forEach((title, index) => {
+                const div = document.createElement('div');
+                div.className = "topic-card glass-panel p-4 rounded-lg border border-gray-700 hover:border-blue-500 relative group";
+                div.innerHTML = `
+                    <div class="text-xs text-gray-500 mb-2 font-mono">IDEA #${String(index + 1).padStart(2, '0')}</div>
+                    <div class="font-bold text-gray-200 group-hover:text-white">${title}</div>
+                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 text-xs font-bold">執筆する →</div>
+                `;
+                div.onclick = () => startWriting(title);
+                grid.appendChild(div);
+            });
+        }
+
+        // --- Step 2: Writing Process ---
+
+        async function startWriting(title) {
+            document.getElementById('topicsSection').classList.add('hidden');
+            document.getElementById('articleSection').classList.remove('hidden');
+            
+            document.getElementById('outlineContent').innerHTML = '<div class="text-gray-500 text-center mt-20">構成案を作成中...</div>';
+            document.getElementById('articleContent').innerHTML = '<div class="text-gray-500 text-center mt-20">待機中...</div>';
+
+            try {
+                // 1. Outline
+                setStatus(true, "SEO構成案を作成中...", `タイトル: ${title}`);
+                const outlinePrompt = `
+                タイトル: ${title}
+                
+                上記タイトルのNote記事を書くための「SEOに強い構成案」を作成してください。
+                Markdown形式で、ターゲット読者（ペルソナ）、検索意図、H2見出し、H3見出し、各章の要点を含めてください。
+                `;
+                const outlineMd = await callGemini(outlinePrompt);
+                document.getElementById('outlineContent').innerHTML = marked.parse(outlineMd);
+
+                // 2. Full Article
+                setStatus(true, "記事本文を執筆中...", "Geminiがライティングを行っています（3000文字目標）");
+                const bodyPrompt = `
+                以下の構成案を元に、Noteの記事本文を執筆してください。
+                
+                【構成案】
+                ${outlineMd}
+
+                【執筆ルール】
+                - 媒体: Note
+                - トーン: 親しみやすく、専門性がある（"です・ます"調）
+                - 文字数: 充実した内容にする（3000文字程度）
+                - 読者への共感と、具体的なアクションプランを必ず含める
+                - Markdown形式で出力
+                `;
+                const articleMd = await callGemini(bodyPrompt);
+                document.getElementById('articleContent').innerHTML = marked.parse(articleMd);
+
+                setStatus(false);
+
+            } catch (e) {
+                alert("執筆中にエラーが発生しました: " + e.message);
+            }
+        }
+
+        function copyArticle() {
+            const content = document.getElementById('articleContent').innerText;
+            navigator.clipboard.writeText(content).then(() => alert("記事をコピーしました！"));
+        }
+    </script>
+</body>
+</html>
