@@ -20,6 +20,19 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Hashtag Chip Style */
+        .hashtag-chip {
+            display: inline-block;
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -84,7 +97,7 @@
                     <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded">STEP 1</span>
                     記事テーマ案 (20選)
                 </h3>
-                <button onclick="resetAll()" class="text-sm text-gray-400 hover:text-white">やり直す</button>
+                <button onclick="resetAll()" class="text-sm text-gray-400 hover:text-white border border-gray-600 px-3 py-1 rounded hover:bg-gray-800 transition">キーワードからやり直す</button>
             </div>
             
             <div id="topicsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -93,27 +106,55 @@
         </section>
 
         <!-- Step 3 & 4: Article Generation -->
-        <section id="articleSection" class="hidden fade-in grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <section id="articleSection" class="hidden fade-in space-y-4">
             
-            <!-- Outline -->
-            <div class="space-y-4">
-                <div class="bg-gray-800 px-4 py-2 rounded-t-lg border-b border-gray-700 flex justify-between items-center">
-                    <span class="text-sm font-bold text-gray-300">📊 構成案 (Outline)</span>
-                    <span class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">SEO Optimized</span>
-                </div>
-                <div class="glass-panel p-6 rounded-b-lg min-h-[500px] max-h-[800px] overflow-y-auto custom-scrollbar">
-                    <div id="outlineContent" class="prose prose-invert max-w-none text-sm"></div>
-                </div>
+            <!-- Navigation Back -->
+            <div class="flex justify-start">
+                <button onclick="backToTopics()" class="text-sm text-gray-400 hover:text-white flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-800 transition-colors">
+                    <span>←</span> テーマ一覧に戻る
+                </button>
             </div>
 
-            <!-- Full Body -->
-            <div class="space-y-4">
-                <div class="bg-blue-900/30 px-4 py-2 rounded-t-lg border-b border-blue-800/50 flex justify-between items-center">
-                    <span class="text-sm font-bold text-blue-300">📝 記事本文 (Draft)</span>
-                    <button onclick="copyArticle()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition">コピー</button>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Outline & Hashtags -->
+                <div class="space-y-6">
+                    <!-- Outline -->
+                    <div class="space-y-4">
+                        <div class="bg-gray-800 px-4 py-2 rounded-t-lg border-b border-gray-700 flex justify-between items-center">
+                            <span class="text-sm font-bold text-gray-300">📊 構成案 (Outline)</span>
+                            <span class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">SEO Optimized</span>
+                        </div>
+                        <div class="glass-panel p-6 rounded-b-lg min-h-[400px] max-h-[600px] overflow-y-auto custom-scrollbar">
+                            <div id="outlineContent" class="prose prose-invert max-w-none text-sm"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="glass-panel p-6 rounded-b-lg min-h-[500px] max-h-[800px] overflow-y-auto custom-scrollbar">
-                    <div id="articleContent" class="prose prose-invert max-w-none"></div>
+
+                <!-- Right Column: Full Body & Hashtags -->
+                <div class="space-y-6">
+                    <!-- Full Body -->
+                    <div class="space-y-4">
+                        <div class="bg-blue-900/30 px-4 py-2 rounded-t-lg border-b border-blue-800/50 flex justify-between items-center">
+                            <span class="text-sm font-bold text-blue-300">📝 記事本文 (Draft)</span>
+                            <button onclick="copyArticle()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition">本文コピー</button>
+                        </div>
+                        <div class="glass-panel p-6 rounded-b-lg min-h-[400px] max-h-[600px] overflow-y-auto custom-scrollbar">
+                            <div id="articleContent" class="prose prose-invert max-w-none"></div>
+                        </div>
+                    </div>
+
+                    <!-- Hashtags -->
+                    <div class="space-y-2">
+                        <div class="bg-indigo-900/30 px-4 py-2 rounded-t-lg border-b border-indigo-800/50 flex justify-between items-center">
+                            <span class="text-sm font-bold text-indigo-300">🏷️ 推奨ハッシュタグ (Keywords)</span>
+                            <button onclick="copyHashtags()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">タグコピー</button>
+                        </div>
+                        <div class="glass-panel p-4 rounded-b-lg">
+                            <div id="hashtagContent" class="flex flex-wrap gap-2 text-sm">
+                                <span class="text-gray-500">記事生成後にここに表示されます...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -193,6 +234,12 @@
             document.getElementById('keyword').value = '';
         }
 
+        function backToTopics() {
+            document.getElementById('articleSection').classList.add('hidden');
+            document.getElementById('topicsSection').classList.remove('hidden');
+            setStatus(false);
+        }
+
         // --- Step 1: Trend Analysis & Topics ---
 
         async function analyzeTrends() {
@@ -254,6 +301,7 @@
             
             document.getElementById('outlineContent').innerHTML = '<div class="text-gray-500 text-center mt-20">構成案を作成中...</div>';
             document.getElementById('articleContent').innerHTML = '<div class="text-gray-500 text-center mt-20">待機中...</div>';
+            document.getElementById('hashtagContent').innerHTML = '<span class="text-gray-500">待機中...</span>';
 
             try {
                 // 1. Outline
@@ -285,6 +333,25 @@
                 const articleMd = await callGemini(bodyPrompt);
                 document.getElementById('articleContent').innerHTML = marked.parse(articleMd);
 
+                // 3. Hashtags (Parallel or Sequential)
+                setStatus(true, "ハッシュタグを選定中...", "Noteで読まれる最適なタグを探しています");
+                const hashtagPrompt = `
+                記事タイトル: ${title}
+                記事構成: ${outlineMd}
+                
+                この記事をNoteに投稿する際におすすめのハッシュタグを10個提案してください。
+                Noteのトレンド（例: #毎日note #ビジネス #副業 など）と、記事内容に合ったSEOキーワードを組み合わせてください。
+
+                【出力形式】
+                ハッシュタグのみを半角スペース区切りで出力してください。（例: #AI #副業 #マーケティング #Note術 ...）
+                余計な説明は不要です。
+                `;
+                let hashtags = await callGemini(hashtagPrompt);
+                
+                // クリーニングとレンダリング
+                hashtags = hashtags.trim().replace(/、/g, ' ').replace(/,/g, ' ');
+                renderHashtags(hashtags);
+
                 setStatus(false);
 
             } catch (e) {
@@ -292,9 +359,35 @@
             }
         }
 
+        function renderHashtags(text) {
+            const container = document.getElementById('hashtagContent');
+            container.innerHTML = '';
+            
+            // #で分割して配列化
+            const tags = text.match(/#\S+/g) || [];
+            
+            if (tags.length === 0) {
+                container.innerText = text; // そのまま表示
+                return;
+            }
+
+            tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'hashtag-chip';
+                span.innerText = tag;
+                container.appendChild(span);
+            });
+        }
+
         function copyArticle() {
             const content = document.getElementById('articleContent').innerText;
-            navigator.clipboard.writeText(content).then(() => alert("記事をコピーしました！"));
+            navigator.clipboard.writeText(content).then(() => alert("記事本文をコピーしました！"));
+        }
+
+        function copyHashtags() {
+            const container = document.getElementById('hashtagContent');
+            const tags = Array.from(container.querySelectorAll('.hashtag-chip')).map(el => el.innerText).join(' ');
+            navigator.clipboard.writeText(tags).then(() => alert("ハッシュタグをコピーしました！"));
         }
     </script>
 </body>
