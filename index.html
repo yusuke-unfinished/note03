@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Factory v6 (with Threads)</title>
+    <title>Gemini Factory v6.1 (Human Like)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -33,7 +33,6 @@
             border: 1px solid rgba(59, 130, 246, 0.4);
         }
         
-        /* Thread Line */
         .thread-line {
             position: absolute;
             left: 24px;
@@ -53,9 +52,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-pink-600 px-1 rounded">v6</span>
+                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-pink-600 px-1 rounded">v6.1 Human</span>
                 </h1>
-                <!-- Dynamic Model Selector -->
                 <div class="relative group">
                     <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
                         <option value="" disabled selected>モデル一覧を取得中...</option>
@@ -448,7 +446,7 @@
                 await sleep(1000);
 
                 // 4. Threads Post (NEW)
-                setStatus(true, "Threads投稿を作成中...", "拡散用スレッドを生成しています");
+                setStatus(true, "Threads投稿を作成中...", "人間味のある投稿を生成中");
                 const threadsPrompt = `
                 以下のNote記事を宣伝するためのThreads（スレッズ）の投稿文を作成してください。
                 
@@ -456,10 +454,12 @@
                 【記事内容】${articleMd}
 
                 【条件】
-                - 3〜5連投のスレッド形式にする。
-                - 1投稿目は読者の興味を惹く「フック（問題提起や逆説）」にする。
-                - 絵文字を適度に使用し、親しみやすくする。
-                - 最後の投稿で「プロフのリンク」または「記事URL」への誘導を行う。
+                - 3連投のスレッド形式にする。
+                - **徹底的に「AI感」を消すこと。**
+                - 独り言や、友達に話すようなカジュアルな口調（タメ口推奨）。
+                - 1投稿は短く（3行程度）。
+                - 専門用語を使わず、感情や「あるある」を入れる。
+                - 最後の投稿で「詳しくはNoteに書いた👇」と誘導する。
                 - 出力形式：各投稿を --- で区切る。
                 `;
                 const threadsText = await callGemini(threadsPrompt);
