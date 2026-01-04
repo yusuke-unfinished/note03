@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Trend Factory (v3 Auto-Discovery)</title>
+    <title>Gemini Writer v4.1 (Model Update)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -41,18 +41,18 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-green-600 px-1 rounded">v3</span>
+                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-purple-600 px-1 rounded">v4.1</span>
                 </h1>
-                <!-- Dynamic Model Selector -->
-                <div class="relative">
-                    <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
-                        <option value="" disabled selected>モデルを取得中...</option>
-                    </select>
-                    <div id="modelStatus" class="absolute -bottom-4 left-0 text-[10px] text-gray-400"></div>
-                </div>
+                <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500">
+                    <option value="gemini-1.5-flash">gemini-1.5-flash (推奨)</option>
+                    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+                    <option value="gemini-3-flash">gemini-3-flash</option>
+                    <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                </select>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="clearApiKey()" class="text-xs text-gray-400 hover:text-red-400 underline">APIキー再設定</button>
+                <button onclick="clearApiKey()" class="text-xs text-gray-400 hover:text-red-400 underline">APIキー削除</button>
             </div>
         </div>
     </header>
@@ -63,13 +63,12 @@
         <div id="apiKeyModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
             <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-600 shadow-2xl">
                 <h2 class="text-xl font-bold text-white mb-4">初期設定</h2>
-                <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。<br>入力後、自動的に利用可能なモデル一覧を取得します。</p>
+                <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。</p>
                 <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:border-blue-500 outline-none">
                 <button onclick="saveApiKey()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition">保存して開始</button>
                 <p class="text-xs text-gray-500 mt-4 text-center">
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-400">APIキーを取得する (Google AI Studio)</a>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-400">APIキーを取得する</a>
                 </p>
-                <div id="apiCheckStatus" class="mt-2 text-xs text-center text-red-400 hidden"></div>
             </div>
         </div>
 
@@ -91,7 +90,7 @@
         <!-- Status Bar -->
         <div id="statusSection" class="hidden max-w-3xl mx-auto">
             <div class="bg-gray-800 rounded-lg p-4 flex items-center gap-4 border border-gray-700 shadow-lg">
-                <div class="loader"></div>
+                <div class="loader" id="statusLoader"></div>
                 <div class="flex-grow">
                     <p id="statusText" class="text-sm font-bold text-blue-400 typing">AI AGENT IS WORKING...</p>
                     <p id="statusSub" class="text-xs text-gray-500">Geminiが市場トレンドを分析中...</p>
@@ -172,32 +171,19 @@
     </main>
 
     <script>
-        // --- API Key Management & Model Discovery ---
+        // --- API Key Management ---
         document.addEventListener('DOMContentLoaded', () => {
             const storedKey = localStorage.getItem('gemini_api_key');
             if (!storedKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
-            } else {
-                fetchModels(storedKey); // 起動時にモデル一覧を取得
             }
         });
 
-        async function saveApiKey() {
+        function saveApiKey() {
             const key = document.getElementById('inputApiKey').value.trim();
             if (!key) return alert('APIキーを入力してください');
-            
-            // 保存前にテスト
-            const statusDiv = document.getElementById('apiCheckStatus');
-            statusDiv.classList.remove('hidden');
-            statusDiv.innerText = "キーを確認中...";
-            
-            const success = await fetchModels(key);
-            if (success) {
-                localStorage.setItem('gemini_api_key', key);
-                document.getElementById('apiKeyModal').classList.add('hidden');
-            } else {
-                statusDiv.innerText = "エラー: モデル一覧を取得できませんでした。キーが正しいか確認してください。";
-            }
+            localStorage.setItem('gemini_api_key', key);
+            document.getElementById('apiKeyModal').classList.add('hidden');
         }
 
         function getApiKey() {
@@ -211,83 +197,50 @@
             }
         }
 
-        // --- Model Fetcher Logic ---
-        async function fetchModels(apiKey) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            const select = document.getElementById('modelSelect');
-            const status = document.getElementById('modelStatus');
+        // --- Core Functions with RETRY Logic ---
 
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("API Key Invalid or Network Error");
-                
-                const data = await response.json();
-                const models = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
-                
-                // プルダウンをクリアして更新
-                select.innerHTML = '';
-                
-                // 優先順位: 1.5-flash -> 1.5-pro -> others
-                models.sort((a, b) => {
-                    const nameA = a.name.toLowerCase();
-                    const nameB = b.name.toLowerCase();
-                    if (nameA.includes('1.5-flash') && !nameB.includes('1.5-flash')) return -1;
-                    if (!nameA.includes('1.5-flash') && nameB.includes('1.5-flash')) return 1;
-                    return 0;
-                });
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-                models.forEach(m => {
-                    const option = document.createElement('option');
-                    // "models/gemini-pro" -> "gemini-pro"
-                    const value = m.name.replace('models/', '');
-                    option.value = value;
-                    option.text = `${value} (${m.displayName})`;
-                    select.appendChild(option);
-                });
-
-                status.innerText = `✅ ${models.length}個のモデルが見つかりました`;
-                return true;
-
-            } catch (e) {
-                console.error(e);
-                select.innerHTML = '<option value="" disabled>モデル取得エラー</option>';
-                status.innerText = "⚠️ モデル一覧の取得に失敗";
-                return false;
-            }
-        }
-
-        // --- Core Functions ---
-
-        async function callGemini(prompt) {
+        async function callGemini(prompt, retries = 3) {
             const apiKey = getApiKey();
             if (!apiKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
                 throw new Error("API Key missing");
             }
 
-            // プルダウンで選択されているモデルを使用
-            let modelName = document.getElementById('modelSelect').value;
-            if (!modelName || modelName === "") {
-                // モデル取得に失敗している場合、フォールバックとして gemini-pro を試す
-                modelName = "gemini-pro"; 
-            }
-
+            const modelName = document.getElementById('modelSelect').value || "gemini-1.5-flash";
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error?.message || "API Request Failed");
+                    // 429 Too Many Requests Handling
+                    if (response.status === 429) {
+                        const waitTime = (i + 1) * 2000; // 2s, 4s, 6s...
+                        setStatus(true, "レート制限(429)です...", `${waitTime / 1000}秒待機して再試行します (${i+1}/${retries})`);
+                        await sleep(waitTime);
+                        continue; // Retry loop
+                    }
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error?.message || "API Error");
+                    }
+
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].text;
+
+                } catch (e) {
+                    if (i === retries - 1) throw e; // Last retry failed
+                    console.warn(`Retry ${i+1}/${retries} due to error:`, e);
+                }
             }
-
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
         }
 
         function setStatus(loading, mainText, subText) {
@@ -350,6 +303,7 @@
             } catch (e) {
                 alert("エラー: " + e.message);
                 resetAll();
+                setStatus(false);
             }
         }
 
@@ -392,6 +346,9 @@
                 const outlineMd = await callGemini(outlinePrompt);
                 document.getElementById('outlineContent').innerHTML = marked.parse(outlineMd);
 
+                // Wait a bit to avoid rate limits
+                await sleep(1000);
+
                 // 2. Full Article
                 setStatus(true, "記事本文を執筆中...", "Geminiがライティングを行っています");
                 const bodyPrompt = `
@@ -409,6 +366,9 @@
                 `;
                 const articleMd = await callGemini(bodyPrompt);
                 document.getElementById('articleContent').innerHTML = marked.parse(articleMd);
+
+                // Wait a bit
+                await sleep(1000);
 
                 // 3. Hashtags
                 setStatus(true, "ハッシュタグを選定中...", "Noteで読まれる最適なタグを探しています");
