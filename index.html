@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Writer v4.1 (Model Update)</title>
+    <title>Gemini Writer v5 (Auto Discovery)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -41,15 +41,15 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-purple-600 px-1 rounded">v4.1</span>
+                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-green-600 px-1 rounded">v5 Auto</span>
                 </h1>
-                <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500">
-                    <option value="gemini-1.5-flash">gemini-1.5-flash (推奨)</option>
-                    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
-                    <option value="gemini-3-flash">gemini-3-flash</option>
-                    <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
-                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                </select>
+                <!-- Dynamic Model Selector -->
+                <div class="relative group">
+                    <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
+                        <option value="" disabled selected>モデル一覧を取得中...</option>
+                    </select>
+                    <div id="modelStatus" class="absolute -bottom-5 left-0 text-[10px] text-gray-400 whitespace-nowrap"></div>
+                </div>
             </div>
             <div class="flex items-center gap-4">
                 <button onclick="clearApiKey()" class="text-xs text-gray-400 hover:text-red-400 underline">APIキー削除</button>
@@ -63,12 +63,13 @@
         <div id="apiKeyModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
             <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-600 shadow-2xl">
                 <h2 class="text-xl font-bold text-white mb-4">初期設定</h2>
-                <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。</p>
+                <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。<br>入力後、利用可能な最新モデル一覧を自動取得します。</p>
                 <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:border-blue-500 outline-none">
                 <button onclick="saveApiKey()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition">保存して開始</button>
                 <p class="text-xs text-gray-500 mt-4 text-center">
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-400">APIキーを取得する</a>
                 </p>
+                <div id="apiCheckStatus" class="mt-2 text-xs text-center text-yellow-400 hidden"></div>
             </div>
         </div>
 
@@ -171,19 +172,32 @@
     </main>
 
     <script>
-        // --- API Key Management ---
+        // --- API Key & Model Discovery ---
         document.addEventListener('DOMContentLoaded', () => {
             const storedKey = localStorage.getItem('gemini_api_key');
             if (!storedKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
+            } else {
+                fetchModels(storedKey); // 起動時にモデル一覧を取得
             }
         });
 
-        function saveApiKey() {
+        async function saveApiKey() {
             const key = document.getElementById('inputApiKey').value.trim();
             if (!key) return alert('APIキーを入力してください');
-            localStorage.setItem('gemini_api_key', key);
-            document.getElementById('apiKeyModal').classList.add('hidden');
+            
+            // 保存前にテスト & モデル取得
+            const statusDiv = document.getElementById('apiCheckStatus');
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerText = "キーを確認し、利用可能なモデルを取得中...";
+            
+            const success = await fetchModels(key);
+            if (success) {
+                localStorage.setItem('gemini_api_key', key);
+                document.getElementById('apiKeyModal').classList.add('hidden');
+            } else {
+                statusDiv.innerText = "エラー: モデル一覧を取得できませんでした。キーを確認してください。";
+            }
         }
 
         function getApiKey() {
@@ -197,7 +211,58 @@
             }
         }
 
-        // --- Core Functions with RETRY Logic ---
+        // --- Model Fetcher Logic ---
+        async function fetchModels(apiKey) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+            const select = document.getElementById('modelSelect');
+            const status = document.getElementById('modelStatus');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("API Key Invalid or Network Error");
+                
+                const data = await response.json();
+                // generateContent をサポートしているモデルのみ抽出
+                const models = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
+                
+                // プルダウンをクリアして更新
+                select.innerHTML = '';
+                
+                // 優先順位: 1.5-flash -> 1.5-pro -> others
+                models.sort((a, b) => {
+                    const nameA = a.name.toLowerCase();
+                    const nameB = b.name.toLowerCase();
+                    if (nameA.includes('1.5-flash') && !nameB.includes('1.5-flash')) return -1;
+                    if (!nameA.includes('1.5-flash') && nameB.includes('1.5-flash')) return 1;
+                    return 0;
+                });
+
+                models.forEach(m => {
+                    const option = document.createElement('option');
+                    // "models/gemini-pro" -> "gemini-pro"
+                    const value = m.name.replace('models/', '');
+                    option.value = value;
+                    option.text = `${value} (${m.displayName})`;
+                    select.appendChild(option);
+                });
+
+                status.innerText = `✅ ${models.length}個の有効なモデルが見つかりました`;
+                return true;
+
+            } catch (e) {
+                console.error(e);
+                // 取得失敗時は安全なフォールバックを表示
+                select.innerHTML = `
+                    <option value="gemini-1.5-flash">gemini-1.5-flash (Fallback)</option>
+                    <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                `;
+                status.innerText = "⚠️ モデル一覧取得失敗 (デフォルトを使用)";
+                return false; // APIキー保存フロー用にはfalseを返す
+            }
+        }
+
+        // --- Core Functions with RETRY & Fallback Logic ---
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -208,7 +273,10 @@
                 throw new Error("API Key missing");
             }
 
-            const modelName = document.getElementById('modelSelect').value || "gemini-1.5-flash";
+            // プルダウンで選択されたモデルを使用
+            let modelName = document.getElementById('modelSelect').value;
+            if (!modelName) modelName = "gemini-1.5-flash"; // 安全策
+
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
@@ -220,12 +288,28 @@
                         body: JSON.stringify(payload)
                     });
 
-                    // 429 Too Many Requests Handling
+                    // 429 Too Many Requests -> Wait & Retry
                     if (response.status === 429) {
-                        const waitTime = (i + 1) * 2000; // 2s, 4s, 6s...
+                        const waitTime = (i + 1) * 2000;
                         setStatus(true, "レート制限(429)です...", `${waitTime / 1000}秒待機して再試行します (${i+1}/${retries})`);
                         await sleep(waitTime);
-                        continue; // Retry loop
+                        continue;
+                    }
+
+                    // 404 Not Found -> Fallback to Safe Model
+                    if (response.status === 404 && i === 0) {
+                        console.warn(`Model ${modelName} not found. Falling back to gemini-1.5-flash-001.`);
+                        setStatus(true, "モデルが見つかりません...", "gemini-1.5-flash-001 に切り替えて再試行します");
+                        // URLを書き換えてリトライ（カウントは進めない）
+                        const safeUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=${apiKey}`;
+                        const safeResp = await fetch(safeUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!safeResp.ok) throw new Error("Fallback failed");
+                        const data = await safeResp.json();
+                        return data.candidates[0].content.parts[0].text;
                     }
 
                     if (!response.ok) {
@@ -237,7 +321,7 @@
                     return data.candidates[0].content.parts[0].text;
 
                 } catch (e) {
-                    if (i === retries - 1) throw e; // Last retry failed
+                    if (i === retries - 1) throw e;
                     console.warn(`Retry ${i+1}/${retries} due to error:`, e);
                 }
             }
@@ -346,7 +430,7 @@
                 const outlineMd = await callGemini(outlinePrompt);
                 document.getElementById('outlineContent').innerHTML = marked.parse(outlineMd);
 
-                // Wait a bit to avoid rate limits
+                // Wait a bit
                 await sleep(1000);
 
                 // 2. Full Article
