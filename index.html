@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Factory v6.1 (Human Like)</title>
+    <title>Gemini Factory v6.2 (Marketer Tone)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -52,7 +52,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-pink-600 px-1 rounded">v6.1 Human</span>
+                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-indigo-500 px-1 rounded">v6.2</span>
                 </h1>
                 <div class="relative group">
                     <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
@@ -445,21 +445,25 @@
                 renderHashtags(hashtags);
                 await sleep(1000);
 
-                // 4. Threads Post (NEW)
-                setStatus(true, "Threads投稿を作成中...", "人間味のある投稿を生成中");
+                // 4. Threads Post (Updated Persona)
+                setStatus(true, "Threads投稿を作成中...", "25歳女性マーケターのトーンで生成中");
                 const threadsPrompt = `
                 以下のNote記事を宣伝するためのThreads（スレッズ）の投稿文を作成してください。
                 
                 【記事タイトル】${title}
                 【記事内容】${articleMd}
 
+                【ペルソナ設定】
+                - 25歳前後の女性マーケター。
+                - 仕事に熱心で、日々の気づきを大切にしている。
+                - 知的さと親しみやすさを兼ね備えた、落ち着いたトーン。
+
                 【条件】
                 - 3連投のスレッド形式にする。
-                - **徹底的に「AI感」を消すこと。**
-                - 独り言や、友達に話すようなカジュアルな口調（タメ口推奨）。
-                - 1投稿は短く（3行程度）。
-                - 専門用語を使わず、感情や「あるある」を入れる。
-                - 最後の投稿で「詳しくはNoteに書いた👇」と誘導する。
+                - 文章は短く、テンポよく（1投稿3行程度）。
+                - 「です・ます」と「だ・である」を適度に混ぜた、自然なSNS文体（例：「〜なんです」「〜だよね」）。
+                - 専門用語は噛み砕くが、幼稚にならないようにする。
+                - 最後の投稿で「詳しくはNoteにまとめました👇」と誘導する。
                 - 出力形式：各投稿を --- で区切る。
                 `;
                 const threadsText = await callGemini(threadsPrompt);
