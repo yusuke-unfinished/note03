@@ -3,44 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Factory v6.4 (Trend News Mix)</title>
+    <title>Gemini Factory v6.6 (Monetization)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background-color: #0F172A; color: #E2E8F0; }
+        
+        /* Markdown Styles */
         .prose h1, .prose h2, .prose h3 { color: #E2E8F0; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: bold; }
         .prose h1 { font-size: 1.8em; border-bottom: 2px solid #334155; }
-        .prose h2 { font-size: 1.5em; border-left: 5px solid #3B82F6; padding-left: 0.5em; }
+        .prose h2 { font-size: 1.5em; border-left: 5px solid #F59E0B; padding-left: 0.5em; } /* Gold accent for paid */
         .prose p, .prose ul, .prose ol { color: #CBD5E1; margin-bottom: 1em; line-height: 1.8; }
-        .prose strong { color: #38BDF8; }
+        .prose strong { color: #FCD34D; }
+        
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .topic-card:hover { transform: translateY(-2px); border-color: #3B82F6; background: rgba(59, 130, 246, 0.1); cursor: pointer; }
-        .loader { border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #3B82F6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        .topic-card:hover { transform: translateY(-2px); border-color: #F59E0B; background: rgba(245, 158, 11, 0.1); cursor: pointer; }
+        
+        /* Paywall Style */
+        .paywall-line {
+            border-top: 2px dashed #F59E0B;
+            margin: 2rem 0;
+            position: relative;
+            text-align: center;
+        }
+        .paywall-line::after {
+            content: "🔒 ここから有料エリア";
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0F172A;
+            padding: 0 1rem;
+            color: #F59E0B;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .paid-content {
+            background: rgba(245, 158, 11, 0.05);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .loader { border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #F59E0B; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .fade-in { animation: fadeIn 0.5s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .hashtag-chip {
             display: inline-block;
-            background-color: rgba(59, 130, 246, 0.2);
-            color: #60A5FA;
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #FCD34D;
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.875rem;
             margin-right: 0.5rem;
             margin-bottom: 0.5rem;
-            border: 1px solid rgba(59, 130, 246, 0.4);
+            border: 1px solid rgba(245, 158, 11, 0.4);
         }
         
         .thread-line {
-            position: absolute;
-            left: 24px;
-            top: 48px;
-            bottom: -16px;
-            width: 2px;
-            background-color: #334155;
-            z-index: 0;
+            position: absolute; left: 24px; top: 48px; bottom: -16px; width: 2px; background-color: #334155; z-index: 0;
         }
         .thread-item:last-child .thread-line { display: none; }
     </style>
@@ -52,10 +76,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-cyan-600 px-1 rounded">v6.4 News</span>
+                    <span class="text-2xl">💰</span> Gemini Factory <span class="text-xs bg-yellow-600 px-1 rounded">v6.6 Paid</span>
                 </h1>
                 <div class="relative group">
-                    <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
+                    <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-yellow-500 min-w-[200px]">
                         <option value="" disabled selected>モデル一覧を取得中...</option>
                     </select>
                     <div id="modelStatus" class="absolute -bottom-5 left-0 text-[10px] text-gray-400 whitespace-nowrap"></div>
@@ -74,10 +98,10 @@
             <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full border border-gray-600 shadow-2xl">
                 <h2 class="text-xl font-bold text-white mb-4">初期設定</h2>
                 <p class="text-gray-400 text-sm mb-4">Gemini APIキーを入力してください。<br>入力後、利用可能な最新モデル一覧を自動取得します。</p>
-                <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:border-blue-500 outline-none">
-                <button onclick="saveApiKey()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded transition">保存して開始</button>
+                <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:border-yellow-500 outline-none">
+                <button onclick="saveApiKey()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded transition">保存して開始</button>
                 <p class="text-xs text-gray-500 mt-4 text-center">
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-400">APIキーを取得する (Google AI Studio)</a>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-yellow-400">APIキーを取得する (Google AI Studio)</a>
                 </p>
                 <div id="apiCheckStatus" class="mt-2 text-xs text-center text-yellow-400 hidden"></div>
             </div>
@@ -85,14 +109,14 @@
 
         <!-- Step 1: Input -->
         <section id="inputSection" class="glass-panel p-8 rounded-xl shadow-lg text-center max-w-3xl mx-auto">
-            <h2 class="text-2xl font-bold text-white mb-2">トレンド分析 & ネタ出し</h2>
-            <p class="text-gray-400 mb-6 text-sm">キーワードを入力してください。AIがトレンドを分析し、記事案を20個提案します。</p>
+            <h2 class="text-2xl font-bold text-white mb-2">トレンド分析 & ネタ出し (有料記事用)</h2>
+            <p class="text-gray-400 mb-6 text-sm">キーワードを入力してください。「お金を払ってでも読みたい」と思われるテーマを提案します。</p>
             
             <div class="relative max-w-lg mx-auto">
-                <input type="text" id="keyword" placeholder="例：AI副業、ミニマリスト、推し活..." 
-                    class="w-full bg-gray-800 border border-gray-600 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-lg shadow-inner"
+                <input type="text" id="keyword" placeholder="例：AI副業、ミニマリスト、インスタ攻略..." 
+                    class="w-full bg-gray-800 border border-gray-600 rounded-full px-6 py-4 text-white focus:ring-2 focus:ring-yellow-500 focus:outline-none transition-all text-lg shadow-inner"
                     onkeydown="if(event.key === 'Enter') analyzeTrends()">
-                <button onclick="analyzeTrends()" id="analyzeBtn" class="absolute right-2 top-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 rounded-full transition-all shadow-md flex items-center gap-2">
+                <button onclick="analyzeTrends()" id="analyzeBtn" class="absolute right-2 top-2 bottom-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 rounded-full transition-all shadow-md flex items-center gap-2">
                     <span id="analyzeIcon">🔍</span>
                 </button>
             </div>
@@ -103,7 +127,7 @@
             <div class="bg-gray-800 rounded-lg p-4 flex items-center gap-4 border border-gray-700 shadow-lg">
                 <div class="loader" id="statusLoader"></div>
                 <div class="flex-grow">
-                    <p id="statusText" class="text-sm font-bold text-blue-400 typing">AI AGENT IS WORKING...</p>
+                    <p id="statusText" class="text-sm font-bold text-yellow-400 typing">AI AGENT IS WORKING...</p>
                     <p id="statusSub" class="text-xs text-gray-500">Geminiが市場トレンドを分析中...</p>
                 </div>
             </div>
@@ -113,8 +137,8 @@
         <section id="topicsSection" class="hidden fade-in">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded">STEP 1</span>
-                    記事テーマ案 (20選)
+                    <span class="bg-yellow-600 text-white text-xs px-2 py-1 rounded">STEP 1</span>
+                    売れる記事テーマ案 (20選)
                 </h3>
                 <button onclick="resetAll()" class="text-sm text-gray-400 hover:text-white border border-gray-600 px-3 py-1 rounded hover:bg-gray-800 transition">キーワードからやり直す</button>
             </div>
@@ -139,8 +163,8 @@
                 <div class="space-y-6">
                     <div class="space-y-4">
                         <div class="bg-gray-800 px-4 py-2 rounded-t-lg border-b border-gray-700 flex justify-between items-center">
-                            <span class="text-sm font-bold text-gray-300">📊 構成案 (Outline)</span>
-                            <span class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">SEO Optimized</span>
+                            <span class="text-sm font-bold text-gray-300">📊 有料記事構成案 (Structure)</span>
+                            <span class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">Monetization</span>
                         </div>
                         <div class="glass-panel p-6 rounded-b-lg min-h-[600px] max-h-[800px] overflow-y-auto custom-scrollbar">
                             <div id="outlineContent" class="prose prose-invert max-w-none text-sm"></div>
@@ -152,9 +176,9 @@
                 <div class="space-y-8">
                     <!-- Note Body -->
                     <div class="space-y-4">
-                        <div class="bg-blue-900/30 px-4 py-2 rounded-t-lg border-b border-blue-800/50 flex justify-between items-center">
-                            <span class="text-sm font-bold text-blue-300">📝 記事本文 (Draft)</span>
-                            <button onclick="copyArticle()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded transition">本文コピー</button>
+                        <div class="bg-yellow-900/30 px-4 py-2 rounded-t-lg border-b border-yellow-800/50 flex justify-between items-center">
+                            <span class="text-sm font-bold text-yellow-300">📝 記事本文 (Draft)</span>
+                            <button onclick="copyArticle()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded transition">本文コピー</button>
                         </div>
                         <div class="glass-panel p-6 rounded-b-lg min-h-[400px] max-h-[600px] overflow-y-auto custom-scrollbar">
                             <div id="articleContent" class="prose prose-invert max-w-none"></div>
@@ -162,7 +186,7 @@
                             <!-- Hashtags -->
                             <div class="mt-6 pt-4 border-t border-gray-700">
                                 <div class="flex justify-between items-center mb-2">
-                                    <span class="text-xs font-bold text-indigo-300">🏷️ 推奨ハッシュタグ</span>
+                                    <span class="text-xs font-bold text-yellow-300">🏷️ 推奨ハッシュタグ</span>
                                     <button onclick="copyHashtags()" class="text-[10px] text-gray-400 hover:text-white">タグコピー</button>
                                 </div>
                                 <div id="hashtagContent" class="flex flex-wrap gap-2 text-sm">
@@ -172,7 +196,7 @@
                         </div>
                     </div>
 
-                    <!-- Threads Post (New) -->
+                    <!-- Threads Post -->
                     <div class="space-y-4">
                         <div class="bg-black/60 px-4 py-2 rounded-t-lg border-b border-gray-700 flex justify-between items-center">
                             <span class="text-sm font-bold text-white flex items-center gap-2">
@@ -230,29 +254,21 @@
             }
         }
 
-        // --- Model Fetcher ---
         async function fetchModels(apiKey) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
             const select = document.getElementById('modelSelect');
-            const status = document.getElementById('modelStatus');
-
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("API Key Invalid");
-                
                 const data = await response.json();
                 const models = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
-                
                 select.innerHTML = '';
-                
                 models.sort((a, b) => {
                     const nameA = a.name.toLowerCase();
                     const nameB = b.name.toLowerCase();
                     if (nameA.includes('flash') && !nameB.includes('flash')) return -1;
-                    if (!nameA.includes('flash') && nameB.includes('flash')) return 1;
                     return 0;
                 });
-
                 models.forEach(m => {
                     const option = document.createElement('option');
                     const value = m.name.replace('models/', '');
@@ -260,31 +276,26 @@
                     option.text = `${value}`;
                     select.appendChild(option);
                 });
-
-                status.innerText = `✅ ${models.length}個のモデルを取得`;
+                document.getElementById('modelStatus').innerText = `✅ ${models.length}モデル取得済`;
                 return true;
-
             } catch (e) {
                 console.error(e);
                 select.innerHTML = '<option value="gemini-1.5-flash">gemini-1.5-flash (Fallback)</option>';
-                status.innerText = "⚠️ モデル一覧取得失敗";
                 return false;
             }
         }
 
-        // --- Core Gemini Caller ---
+        // --- Core Gemini Caller with Retry ---
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        async function callGemini(prompt, retries = 3) {
+        async function callGemini(prompt, retries = 5) {
             const apiKey = getApiKey();
             if (!apiKey) {
                 document.getElementById('apiKeyModal').classList.remove('hidden');
                 throw new Error("API Key missing");
             }
 
-            let modelName = document.getElementById('modelSelect').value;
-            if (!modelName) modelName = "gemini-1.5-flash";
-
+            let modelName = document.getElementById('modelSelect').value || "gemini-1.5-flash";
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
@@ -297,8 +308,8 @@
                     });
 
                     if (response.status === 429) {
-                        const waitTime = (i + 1) * 2000;
-                        setStatus(true, "レート制限(429)です...", `${waitTime/1000}秒待機中...`);
+                        const waitTime = Math.pow(2, i) * 2000; 
+                        setStatus(true, "レート制限(429)...", `${waitTime/1000}秒待機して再試行します (${i+1}/${retries})`);
                         await sleep(waitTime);
                         continue;
                     }
@@ -341,40 +352,46 @@
             setStatus(false);
         }
 
-        // --- Step 1: Trend Analysis ---
+        // --- Step 1: Trend Analysis (Monetization Focused) ---
         async function analyzeTrends() {
             const keyword = document.getElementById('keyword').value;
             if (!keyword) return alert("キーワードを入力してください");
 
             document.getElementById('inputSection').classList.add('hidden');
-            setStatus(true, "トレンド分析中...", `「${keyword}」周辺のインサイトを分析しています`);
+            setStatus(true, "トレンド分析中...", `「${keyword}」で売れるテーマを探しています`);
 
             const prompt = `
-            あなたはプロのWebマーケター兼編集長です。
-            キーワード「${keyword}」について、現在のトレンドや読者の関心事（インサイト）を分析してください。
-            その上で、Noteで多くのスキを集めそうな「記事タイトルの案」を20個リストアップしてください。
+            あなたはプロのWebマーケターです。
+            キーワード「${keyword}」について、人々がお金を払ってでも知りたい「深い悩み」や「最短の解決策」を分析してください。
+            その上で、Noteの有料記事として成立する記事タイトルの案を20個リストアップしてください。
 
             【条件】
-            - ターゲット: 初心者〜中級者
-            - バリエーション: 「ハウツー」「マインドセット」「ツール紹介」「体験談」「逆張り」など網羅的に
+            - ターゲット: 本気で課題を解決したい層。
+            - バリエーション: 「完全ロードマップ」「秘伝のテンプレート」「失敗談と改善策」「収益化の裏側」など。
             - 出力形式: JSON配列のみ（例: ["タイトル1", "タイトル2", ...]）
-            - 余計な説明は一切不要
+            - 余計な説明は一切不要。
             `;
 
             try {
                 let text = await callGemini(prompt);
                 text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                const jsonMatch = text.match(/\[.*\]/s);
+                const jsonMatch = text.match(/\[[\s\S]*\]/);
                 if (jsonMatch) text = jsonMatch[0];
 
-                const topics = JSON.parse(text);
+                let topics;
+                try {
+                    topics = JSON.parse(text);
+                } catch (e) {
+                    topics = text.split('\n').map(l => l.replace(/[\[\]",]/g, '').trim()).filter(l => l.length > 2);
+                }
+
                 renderTopics(topics);
                 setStatus(false);
                 document.getElementById('topicsSection').classList.remove('hidden');
 
             } catch (e) {
                 alert("エラー: " + e.message);
-                resetAll();
+                document.getElementById('inputSection').classList.remove('hidden');
                 setStatus(false);
             }
         }
@@ -384,18 +401,18 @@
             grid.innerHTML = "";
             topics.forEach((title, index) => {
                 const div = document.createElement('div');
-                div.className = "topic-card glass-panel p-4 rounded-lg border border-gray-700 hover:border-blue-500 relative group";
+                div.className = "topic-card glass-panel p-4 rounded-lg border border-gray-700 hover:border-yellow-500 relative group";
                 div.innerHTML = `
-                    <div class="text-xs text-gray-500 mb-2 font-mono">IDEA #${String(index + 1).padStart(2, '0')}</div>
+                    <div class="text-xs text-gray-500 mb-2 font-mono">PLAN #${String(index + 1).padStart(2, '0')}</div>
                     <div class="font-bold text-gray-200 group-hover:text-white">${title}</div>
-                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 text-xs font-bold">執筆する →</div>
+                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-yellow-400 text-xs font-bold">執筆する →</div>
                 `;
                 div.onclick = () => startWriting(title);
                 grid.appendChild(div);
             });
         }
 
-        // --- Step 2: Writing & Threads Generation ---
+        // --- Step 2: Writing & Threads (Monetization Logic) ---
         async function startWriting(title) {
             document.getElementById('topicsSection').classList.add('hidden');
             document.getElementById('articleSection').classList.remove('hidden');
@@ -406,66 +423,79 @@
             document.getElementById('threadsContent').innerHTML = '<span class="text-gray-500 text-center block mt-10">待機中...</span>';
 
             try {
-                // 1. Outline
-                setStatus(true, "SEO構成案を作成中...", `タイトル: ${title}`);
+                // 1. Outline (Split Free/Paid)
+                setStatus(true, "有料記事構成を作成中...", `タイトル: ${title}`);
                 const outlinePrompt = `
                 タイトル: ${title}
-                上記タイトルのNote記事を書くための「SEOに強い構成案」を作成してください。
-                Markdown形式で、ターゲット読者（ペルソナ）、検索意図、H2見出し、H3見出し、各章の要点を含めてください。
+                上記タイトルの「有料Note記事」の構成案を作成してください。
+                
+                【必須構成】
+                前半：無料エリア（問題提起、共感、信頼獲得、有料エリアへのフック）
+                後半：有料エリア（具体的な解決策、テンプレート、実データ、差別化されたノウハウ）
+                
+                Markdown形式で出力してください。
                 `;
                 const outlineMd = await callGemini(outlinePrompt);
                 document.getElementById('outlineContent').innerHTML = marked.parse(outlineMd);
-                await sleep(1000);
+                await sleep(2000);
 
-                // 2. Full Article
-                setStatus(true, "記事本文を執筆中...", "Geminiがライティングを行っています");
+                // 2. Full Article (With Paywall)
+                setStatus(true, "記事本文を執筆中...", "無料/有料エリアを分けて生成中");
                 const bodyPrompt = `
-                以下の構成案を元に、Noteの記事本文を執筆してください。
+                以下の構成案を元に、有料Note記事の本文を執筆してください。
                 【構成案】${outlineMd}
-                【執筆ルール】
-                - 媒体: Note
-                - トーン: 親しみやすく、専門性がある（"です・ます"調）
-                - 文字数: 充実した内容にする（3000文字程度）
-                - 読者への共感と、具体的なアクションプランを必ず含める
-                - Markdown形式で出力
+
+                【重要ルール: ペイウォールの設置】
+                - 記事の途中に必ず「--- ここから有料エリア ---」という明確な区切り線を入れてください。
+                - 無料エリア：読者の悩みに寄り添い、「この記事を読めば解決できる」と確信させる内容。
+                - 有料エリア：読者がお金を払ってよかったと思える、具体的で濃い情報（Step by Step、テンプレートなど）。
+                - トーン：親しみやすく、かつ専門性がある。Markdown形式。
                 `;
                 const articleMd = await callGemini(bodyPrompt);
-                document.getElementById('articleContent').innerHTML = marked.parse(articleMd);
-                await sleep(1000);
+                
+                // Render with Custom Paywall Styling
+                const renderer = new marked.Renderer();
+                const originalTextRenderer = renderer.text;
+                // Simple replace for visual effect in preview
+                const formattedArticle = articleMd.replace(
+                    /--- ここから有料エリア ---|--- 有料エリア ---/g, 
+                    '<div class="paywall-line"></div><div class="paid-content">'
+                ) + '</div>'; // Close paid content div at end (simplified)
+
+                // Note: Standard marked doesn't support custom injection easily mid-stream without plugins, 
+                // so we do a post-render replace for the visual preview.
+                let htmlContent = marked.parse(articleMd);
+                htmlContent = htmlContent.replace(
+                    /<hr>/g, // Assuming --- becomes <hr>
+                    '<div class="paywall-line"></div><div class="paid-content">'
+                );
+                // Close the div roughly (browser auto-close helps, but for strictness we just visual style)
+                
+                document.getElementById('articleContent').innerHTML = htmlContent;
+                await sleep(2000);
 
                 // 3. Hashtags
-                const hashtagPrompt = `
-                記事タイトル: ${title}
-                この記事におすすめのハッシュタグを10個提案してください。
-                【出力形式】ハッシュタグのみを半角スペース区切りで出力（例: #AI #副業 ...）
-                `;
+                const hashtagPrompt = `記事タイトル: ${title}\nこの記事におすすめのハッシュタグを10個、半角スペース区切りで出力（例: #AI #副業 ...）。`;
                 let hashtags = await callGemini(hashtagPrompt);
                 hashtags = hashtags.trim().replace(/、/g, ' ').replace(/,/g, ' ');
                 renderHashtags(hashtags);
-                await sleep(1000);
+                await sleep(2000);
 
-                // 4. Threads Post (News Mix)
-                setStatus(true, "Threads投稿を作成中...", "最新トレンドを絡めて生成中");
+                // 4. Threads Post (Teaser for Paid Content)
+                setStatus(true, "Threads投稿を作成中...", "有料記事への誘導を最適化中");
                 const threadsPrompt = `
-                以下のNote記事を宣伝するためのThreads（スレッズ）の投稿文を作成してください。
+                以下の有料Note記事を販売するためのThreads投稿文を作成してください。
                 
                 【記事タイトル】${title}
                 【記事内容】${articleMd}
 
-                【ペルソナ】
-                - 25歳前後の女性マーケター。
-                - 仕事熱心で、ニュースやトレンドに敏感。
-                - 知的で落ち着いたトーン。「〜だよね」「〜なんです」。
-
-                【必須条件: トレンド結合】
-                - 投稿の中に、この記事の内容に関連する「最近の業界ニュース」「トレンドの話題（AI、SNS仕様変更、働き方改革など）」をさりげなく盛り込むこと。
-                - 例：「最近〇〇のニュースで話題だけど...」「〇〇の変化、気づいてる？」
-                - これにより「今読むべき理由（タイムリーさ）」を演出する。
-
-                【構成】
+                【ペルソナ】25歳前後の女性マーケター。賢く、親しみやすい。「〜だよね」「〜なんです」。
+                
+                【条件】
                 - 3連投のスレッド形式。
-                - 1投稿目は3〜4行程度。フックを強く。
-                - 最後の投稿でNoteへ誘導。
+                - 1投稿目：強力なフック（トレンドニュースや逆説を絡める）。
+                - 2投稿目：無料部分の学びをシェアしつつ、「一番重要な核心部分」は隠す。
+                - 3投稿目：「具体的な方法は有料部分に全部書きました」「今なら〇〇も公開中」とNoteへ誘導。
                 - 出力形式：各投稿を --- で区切る。
                 `;
                 const threadsText = await callGemini(threadsPrompt);
@@ -495,10 +525,7 @@
         function renderThreads(text) {
             const container = document.getElementById('threadsContent');
             container.innerHTML = '';
-            
-            // "---" で分割
             const posts = text.split('---').map(p => p.trim()).filter(p => p.length > 0);
-            
             posts.forEach((post, index) => {
                 const div = document.createElement('div');
                 div.className = "thread-item relative pl-8 pb-6";
@@ -526,6 +553,19 @@
             const container = document.getElementById('threadsContent');
             const text = Array.from(container.querySelectorAll('.thread-item .text-sm')).map(el => el.innerText).join('\n\n---\n\n');
             navigator.clipboard.writeText(text).then(() => alert("Threads投稿をコピーしました！"));
+        }
+        
+        function backToTopics() {
+            document.getElementById('articleSection').classList.add('hidden');
+            document.getElementById('topicsSection').classList.remove('hidden');
+            setStatus(false);
+        }
+        
+        function resetAll() {
+            document.getElementById('inputSection').classList.remove('hidden');
+            document.getElementById('topicsSection').classList.add('hidden');
+            document.getElementById('articleSection').classList.add('hidden');
+            document.getElementById('keyword').value = '';
         }
     </script>
 </body>
