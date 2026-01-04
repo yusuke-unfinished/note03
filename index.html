@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Factory v6.2 (Marketer Tone)</title>
+    <title>Gemini Factory v6.4 (Trend News Mix)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -52,7 +52,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-indigo-500 px-1 rounded">v6.2</span>
+                    <span class="text-2xl">🏭</span> Gemini Factory <span class="text-xs bg-cyan-600 px-1 rounded">v6.4 News</span>
                 </h1>
                 <div class="relative group">
                     <select id="modelSelect" class="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-blue-500 min-w-[200px]">
@@ -245,7 +245,6 @@
                 
                 select.innerHTML = '';
                 
-                // Sort Priority
                 models.sort((a, b) => {
                     const nameA = a.name.toLowerCase();
                     const nameB = b.name.toLowerCase();
@@ -445,25 +444,28 @@
                 renderHashtags(hashtags);
                 await sleep(1000);
 
-                // 4. Threads Post (Updated Persona)
-                setStatus(true, "Threads投稿を作成中...", "25歳女性マーケターのトーンで生成中");
+                // 4. Threads Post (News Mix)
+                setStatus(true, "Threads投稿を作成中...", "最新トレンドを絡めて生成中");
                 const threadsPrompt = `
                 以下のNote記事を宣伝するためのThreads（スレッズ）の投稿文を作成してください。
                 
                 【記事タイトル】${title}
                 【記事内容】${articleMd}
 
-                【ペルソナ設定】
+                【ペルソナ】
                 - 25歳前後の女性マーケター。
-                - 仕事に熱心で、日々の気づきを大切にしている。
-                - 知的さと親しみやすさを兼ね備えた、落ち着いたトーン。
+                - 仕事熱心で、ニュースやトレンドに敏感。
+                - 知的で落ち着いたトーン。「〜だよね」「〜なんです」。
 
-                【条件】
-                - 3連投のスレッド形式にする。
-                - 文章は短く、テンポよく（1投稿3行程度）。
-                - 「です・ます」と「だ・である」を適度に混ぜた、自然なSNS文体（例：「〜なんです」「〜だよね」）。
-                - 専門用語は噛み砕くが、幼稚にならないようにする。
-                - 最後の投稿で「詳しくはNoteにまとめました👇」と誘導する。
+                【必須条件: トレンド結合】
+                - 投稿の中に、この記事の内容に関連する「最近の業界ニュース」「トレンドの話題（AI、SNS仕様変更、働き方改革など）」をさりげなく盛り込むこと。
+                - 例：「最近〇〇のニュースで話題だけど...」「〇〇の変化、気づいてる？」
+                - これにより「今読むべき理由（タイムリーさ）」を演出する。
+
+                【構成】
+                - 3連投のスレッド形式。
+                - 1投稿目は3〜4行程度。フックを強く。
+                - 最後の投稿でNoteへ誘導。
                 - 出力形式：各投稿を --- で区切る。
                 `;
                 const threadsText = await callGemini(threadsPrompt);
